@@ -1,0 +1,16 @@
+{
+  "Name": "999 Challenge Tracker",
+  "Author": "JustinMiller",
+  "Version": "1.0.0",
+  "Description": "Live, in-game collection-board checklist for the 999-of-everything challenge: Have/999/To-go per item, by quality, across your inventory and every chest, fridge and Junimo chest on the farm.",
+  "UniqueID": "JustinMiller.Challenge999Tracker",
+  "EntryDll": "Challenge999Tracker.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": [],
+  "Dependencies": [
+    {
+      "UniqueID": "spacechase0.GenericModConfigMenu",
+      "IsRequired": false
+    }
+  ]
+}
