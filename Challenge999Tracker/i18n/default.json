@@ -1,0 +1,15 @@
+{
+  "config.open-tracker-key.name": "Open tracker key",
+  "config.open-tracker-key.tooltip": "The key that opens the 999 Challenge Tracker during gameplay. Press it again (or Escape) to close.",
+  "menu.title": "999 Challenge Tracker",
+  "menu.totals-tab": "Totals",
+  "menu.search-label": "Search",
+  "menu.filter.all": "All",
+  "menu.filter.incomplete": "Incomplete",
+  "menu.filter.complete": "Complete",
+  "menu.unknown-short": "?",
+  "menu.hover.matched": "Matched: {{names}}",
+  "menu.hover.breakdown": "Normal {{normal}} / Silver {{silver}} / Gold {{gold}} / Iridium {{iridium}}",
+  "menu.hover.unknown": "The game can't tell this apart from other sources - check manually.",
+  "menu.hover.required-breakdown": "Required breakdown:"
+}
