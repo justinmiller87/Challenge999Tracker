@@ -10893,6 +10893,12 @@
   },
   {
    "sheet": "Artisan Goods Jar",
+   "label": "Pickles",
+   "requiredLiteral": 999,
+   "requiredExpr": null
+  },
+  {
+   "sheet": "Artisan Goods Jar",
    "label": "Pickles: Amaranth",
    "requiredLiteral": 999,
    "requiredExpr": null
@@ -11133,6 +11139,12 @@
   },
   {
    "sheet": "Artisan Goods Jar",
+   "label": "Jelly",
+   "requiredLiteral": 999,
+   "requiredExpr": null
+  },
+  {
+   "sheet": "Artisan Goods Jar",
    "label": "Jelly: Ancient Fruit",
    "requiredLiteral": 999,
    "requiredExpr": null
@@ -11321,6 +11333,12 @@
   {
    "sheet": "Artisan Goods Keg",
    "label": "Green Tea",
+   "requiredLiteral": 999,
+   "requiredExpr": null
+  },
+  {
+   "sheet": "Artisan Goods Keg",
+   "label": "Juice",
    "requiredLiteral": 999,
    "requiredExpr": null
   },
@@ -11525,6 +11543,12 @@
   {
    "sheet": "Artisan Goods Keg",
    "label": "Pale Ale",
+   "requiredLiteral": 999,
+   "requiredExpr": null
+  },
+  {
+   "sheet": "Artisan Goods Keg",
+   "label": "Wine",
    "requiredLiteral": 999,
    "requiredExpr": null
   },
@@ -11917,6 +11941,21 @@
    "label": "Goat Cheese",
    "requiredLiteral": 999,
    "requiredExpr": null
+  },
+  {
+   "sheet": "Artisan Goods Other",
+   "label": "Honey",
+   "requiredLiteral": 999,
+   "requiredExpr": {
+    "op": "sum",
+    "args": [
+     {
+      "op": "ref",
+      "sheet": "Consumables",
+      "label": "Totem: Farm"
+     }
+    ]
+   }
   },
   {
    "sheet": "Artisan Goods Other",

@@ -16,7 +16,7 @@ ITEM_SHEETS = [
     "Artifacts", "Decor Lighting", "Decor Infrastructure", "Decor Other",
 ]
 AGGREGATE_ROWS = re.compile(
-    r"(extra$|^category:?$|^wild seeds: total$|^(wine|juice|jelly|pickles|honey)$)", re.I)
+    r"(extra$|^category:?$|^wild seeds: total$)", re.I)
 
 root = ET.parse("content.xml").getroot()
 tables = {t.get(T+"name"): t for t in root.iter(T+"table")}
