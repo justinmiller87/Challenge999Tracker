@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -100,7 +101,11 @@ public sealed class RequirementGraph
     }
 
     var baseHave = haveByKey.TryGetValue(key, out var h) ? h : 0;
-    var value = baseHave + (row.RequiredExpr is null ? 0 : EvalTotal(row.RequiredExpr, haveByKey, memo, visiting));
+    var rawValue = baseHave + (row.RequiredExpr is null ? 0 : EvalTotal(row.RequiredExpr, haveByKey, memo, visiting));
+    // Overflow protection: a row can never contribute more toward dependent totals (or its own
+    // percentage) than its own Required - otherwise stockpiling one item way past 999 (e.g. a huge
+    // pile of Stone from staircases) inflates every row that references it, sometimes past 100%.
+    var value = Math.Min(rawValue, RequiredInternal(key, new HashSet<(string, string)>()));
     visiting.Remove(key);
     memo[key] = value;
     return value;
