@@ -4,6 +4,8 @@
   "menu.title": "999 Challenge Tracker",
   "menu.totals-tab": "Totals",
   "menu.search-label": "Search",
+  "menu.search.totals-label": "Search all items:",
+  "menu.search.no-matches": "No items match - try a different search.",
   "menu.filter.all": "All",
   "menu.filter.incomplete": "Incomplete",
   "menu.filter.complete": "Complete",

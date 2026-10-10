@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
@@ -46,6 +47,7 @@ public sealed class TrackerMenu : IClickableMenu
   private readonly Action _saveConfig;
   private readonly ITranslationHelper _translation;
   private readonly TextBox _searchBox;
+  private readonly TextBox _totalsSearchBox;
   private readonly ClickableComponent _filterButton;
   private readonly ClickableComponent _backButton;
 
@@ -56,7 +58,11 @@ public sealed class TrackerMenu : IClickableMenu
   private int _totalsScroll;
   private int _hoveredTotalsRow = -1;
   private string _lastSearchText = "";
+  private string _lastTotalsSearchText = "";
   private Rectangle _listArea;
+
+  /// <summary>True while the Totals landing page is showing cross-sheet search results instead of the sheet rollup - lets a player who isn't sure which category an item lives under just search for it there.</summary>
+  private bool IsSearchingTotals => _activeSheet == TotalsTabKey && _totalsSearchBox.Text.Trim().Length > 0;
 
   public TrackerMenu(
     List<ProgressEntry> entries, TotalsPage totalsPage,
@@ -84,6 +90,14 @@ public sealed class TrackerMenu : IClickableMenu
       X = _backButton.bounds.Right + 16,
       Y = navY,
       Width = _filterButton.bounds.X - 16 - (_backButton.bounds.Right + 16),
+      Height = NavButtonHeight,
+    };
+    var totalsSearchLabelWidth = (int)Game1.smallFont.MeasureString(_translation.Get("menu.search.totals-label")).X;
+    _totalsSearchBox = new TextBox(Game1.content.Load<Texture2D>("LooseSprites\\textBox"), null, Game1.smallFont, Game1.textColor)
+    {
+      X = xPositionOnScreen + ContentMarginX + totalsSearchLabelWidth + 12,
+      Y = navY,
+      Width = width - 2 * ContentMarginX - totalsSearchLabelWidth - 12,
       Height = NavButtonHeight,
     };
 
@@ -127,6 +141,21 @@ public sealed class TrackerMenu : IClickableMenu
     _lastSearchText = _searchBox.Text;
   }
 
+  /// <summary>Populates <see cref="_visibleEntries" /> with every item across every sheet matching the Totals page's search box, so a player unsure which category something lives under can just search for it there - reuses the same item-row renderer/scroll/hover as a normal sheet view.</summary>
+  private void RefreshTotalsSearchEntries()
+  {
+    var search = _totalsSearchBox.Text.Trim();
+    _visibleEntries = search.Length == 0
+      ? new List<ProgressEntry>()
+      : _allEntries
+        .Where(e => e.Item.Contains(search, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(e => e.Sheet, StringComparer.Ordinal)
+        .ThenBy(e => e.Item, StringComparer.Ordinal)
+        .ToList();
+    _scrollIndex = 0;
+    _lastTotalsSearchText = _totalsSearchBox.Text;
+  }
+
   private int VisibleRowCount => Math.Max(1, _listArea.Height / RowHeight);
 
   /// <summary>How many Totals rows fit between the header row and the reserved footer band - see the class remarks for the arithmetic this depends on.</summary>
@@ -142,6 +171,28 @@ public sealed class TrackerMenu : IClickableMenu
     {
       RefreshVisibleEntries();
     }
+
+    _totalsSearchBox.Update();
+    if (_activeSheet == TotalsTabKey && _totalsSearchBox.Text != _lastTotalsSearchText)
+    {
+      RefreshTotalsSearchEntries();
+    }
+  }
+
+  /// <summary>
+  ///   The base game's menu-button keybind (E/Esc by default) closes whatever menu is open as soon as it's
+  ///   pressed - it doesn't check whether a TextBox currently has keyboard focus first. That means typing a
+  ///   search term containing "e" would otherwise slam the tracker shut mid-keystroke. Swallow it here while
+  ///   either search box is focused, except Escape, which should still close the menu as expected.
+  /// </summary>
+  public override void receiveKeyPress(Keys key)
+  {
+    if ((_searchBox.Selected || _totalsSearchBox.Selected) && key != Keys.Escape)
+    {
+      return;
+    }
+
+    base.receiveKeyPress(key);
   }
 
   public override void receiveLeftClick(int x, int y, bool playSound = true)
@@ -150,6 +201,24 @@ public sealed class TrackerMenu : IClickableMenu
 
     if (_activeSheet == TotalsTabKey)
     {
+      if (IsSearchingTotals)
+      {
+        if (_listArea.Contains(x, y))
+        {
+          var resultIndex = _scrollIndex + (y - _listArea.Y) / RowHeight;
+          if (resultIndex >= 0 && resultIndex < _visibleEntries.Count)
+          {
+            var entry = _visibleEntries[resultIndex];
+            _activeSheet = entry.Sheet;
+            _searchBox.Text = entry.Item;
+            RefreshVisibleEntries();
+            Game1.playSound("shwip");
+          }
+        }
+
+        return;
+      }
+
       var sheetIndex = TotalsRowIndexAt(x, y);
       if (sheetIndex is >= 0 && sheetIndex < _totalsPage.Sheets.Count)
       {
@@ -164,7 +233,15 @@ public sealed class TrackerMenu : IClickableMenu
     if (_backButton.bounds.Contains(x, y))
     {
       _activeSheet = TotalsTabKey;
-      RefreshVisibleEntries();
+      if (IsSearchingTotals)
+      {
+        RefreshTotalsSearchEntries();
+      }
+      else
+      {
+        RefreshVisibleEntries();
+      }
+
       Game1.playSound("shwip");
       return;
     }
@@ -193,7 +270,7 @@ public sealed class TrackerMenu : IClickableMenu
   public override void receiveScrollWheelAction(int direction)
   {
     base.receiveScrollWheelAction(direction);
-    if (_activeSheet == TotalsTabKey)
+    if (_activeSheet == TotalsTabKey && !IsSearchingTotals)
     {
       _totalsScroll = Math.Clamp(_totalsScroll - Math.Sign(direction), 0, MaxTotalsScroll);
       return;
@@ -209,7 +286,7 @@ public sealed class TrackerMenu : IClickableMenu
     _hoveredIndex = -1;
     _hoveredTotalsRow = -1;
 
-    if (_activeSheet == TotalsTabKey)
+    if (_activeSheet == TotalsTabKey && !IsSearchingTotals)
     {
       var sheetIndex = TotalsRowIndexAt(x, y);
       if (sheetIndex is >= 0 && sheetIndex < _totalsPage.Sheets.Count)
@@ -242,7 +319,18 @@ public sealed class TrackerMenu : IClickableMenu
 
     if (_activeSheet == TotalsTabKey)
     {
-      DrawTotalsPage(b);
+      Utility.drawTextWithShadow(b, _translation.Get("menu.search.totals-label"), Game1.smallFont,
+        new Vector2(xPositionOnScreen + ContentMarginX, _totalsSearchBox.Y + 12), Game1.textColor);
+      _totalsSearchBox.Draw(b);
+      if (IsSearchingTotals)
+      {
+        DrawRows(b, showSheet: true);
+        DrawHoveredEntry(b);
+      }
+      else
+      {
+        DrawTotalsPage(b);
+      }
     }
     else
     {
@@ -250,11 +338,7 @@ public sealed class TrackerMenu : IClickableMenu
       _searchBox.Draw(b);
       DrawFilterButton(b);
       DrawRows(b);
-
-      if (_hoveredIndex >= 0 && _hoveredIndex < _visibleEntries.Count)
-      {
-        DrawHover(b, _visibleEntries[_hoveredIndex]);
-      }
+      DrawHoveredEntry(b);
     }
 
     base.draw(b);
@@ -284,11 +368,21 @@ public sealed class TrackerMenu : IClickableMenu
       new Vector2(_filterButton.bounds.Center.X - textSize.X / 2, _filterButton.bounds.Center.Y - textSize.Y / 2), Game1.textColor);
   }
 
-  private void DrawRows(SpriteBatch b)
+  private void DrawHoveredEntry(SpriteBatch b)
+  {
+    if (_hoveredIndex >= 0 && _hoveredIndex < _visibleEntries.Count)
+    {
+      DrawHover(b, _visibleEntries[_hoveredIndex]);
+    }
+  }
+
+  /// <summary>Draws the icon/name/Have/Total item rows. <paramref name="showSheet" /> is set only for the Totals page's cross-sheet search results, where the entries aren't all from one category, so each row also names which sheet it lives under.</summary>
+  private void DrawRows(SpriteBatch b, bool showSheet = false)
   {
     if (_visibleEntries.Count == 0)
     {
-      Utility.drawTextWithShadow(b, "No items match.", Game1.smallFont, new Vector2(_listArea.X, _listArea.Y), Game1.textColor);
+      var emptyText = showSheet ? _translation.Get("menu.search.no-matches").ToString() : "No items match.";
+      Utility.drawTextWithShadow(b, emptyText, Game1.smallFont, new Vector2(_listArea.X, _listArea.Y), Game1.textColor);
       return;
     }
 
@@ -311,7 +405,13 @@ public sealed class TrackerMenu : IClickableMenu
       DrawIcon(b, entry, new Vector2(rowBounds.X + 2, rowBounds.Y + 2));
 
       var rowColor = entry.IsComplete ? Color.DarkGreen : Game1.textColor;
-      Utility.drawTextWithShadow(b, entry.Item, Game1.smallFont, new Vector2(rowBounds.X + IconSize + 16, rowBounds.Y + 8), rowColor);
+      var itemX = rowBounds.X + IconSize + 16;
+      Utility.drawTextWithShadow(b, entry.Item, Game1.smallFont, new Vector2(itemX, rowBounds.Y + 8), rowColor);
+      if (showSheet)
+      {
+        var itemWidth = Game1.smallFont.MeasureString(entry.Item).X;
+        Utility.drawTextWithShadow(b, $"({entry.Sheet})", Game1.smallFont, new Vector2(itemX + itemWidth + 10, rowBounds.Y + 8), Color.Gray);
+      }
 
       // Three columns, anchored by their LEFT edge (haveColumnX/statusColumnX) but each value is drawn
       // right-aligned to end 16px before the next column's start - otherwise a long Required (anything in the
