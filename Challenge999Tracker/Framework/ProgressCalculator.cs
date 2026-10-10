@@ -14,11 +14,17 @@ public static class ProgressCalculator
 
   private sealed record RawFacts(int? Have, string Target, int Normal, int Silver, int Gold, int Iridium, string Matched, string? IconId);
 
+  /// <param name="ignoreQuality">
+  ///   If true, an item's Have counts every quality tier summed together instead of only its own
+  ///   highest-reachable tier (e.g. iridium for Cask-aged Wine, or iridium-quality produce) - this feeds
+  ///   Total/Required/IsComplete/ToGo for free since they're all derived from Have.
+  /// </param>
   public static List<ProgressEntry> Calculate(
     ChecklistDocument document,
     RequirementGraph graph,
     IReadOnlyDictionary<(string Id, string Name), StockEntry> stock,
-    IReadOnlyDictionary<string, List<StaticItemIndex.Entry>> staticIndex)
+    IReadOnlyDictionary<string, List<StaticItemIndex.Entry>> staticIndex,
+    bool ignoreQuality = false)
   {
     var byId = new Dictionary<string, List<StockEntry>>();
     var byName = new Dictionary<string, List<StockEntry>>();
@@ -96,7 +102,7 @@ public static class ProgressCalculator
         }
       }
 
-      int? have = unknown ? null : mq != 0 ? q.GetValueOrDefault(mq) : q.Values.Sum();
+      int? have = unknown ? null : mq != 0 && !ignoreQuality ? q.GetValueOrDefault(mq) : q.Values.Sum();
       var target = matched.Count > 0 ? (mq != 0 ? QualityNames[mq] : "any") : "";
       var matchedNames = string.Join("; ", matched.Select(e => e.Name).Distinct().OrderBy(n => n, StringComparer.Ordinal));
       var iconId = ResolveIcon(row.Label, matched, staticIndex);

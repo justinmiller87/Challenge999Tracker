@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Challenge999Tracker.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
@@ -23,7 +24,11 @@ public sealed class ModEntry : Mod
 
   private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
   {
-    GenericModConfigMenuIntegration.Register(Helper, ModManifest, _config, () => Helper.WriteConfig(_config));
+    // Loaded here (not lazily on first open, like the rest of this field) purely so GMCM has the sheet list
+    // to build per-category toggles from before the player ever opens the tracker - it's static JSON with no
+    // game-state dependency, so there's no harm starting it early.
+    _checklist ??= ChecklistLoader.Load(Helper);
+    GenericModConfigMenuIntegration.Register(Helper, ModManifest, _config, () => Helper.WriteConfig(_config), _checklist.Sheets);
   }
 
   private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
@@ -63,7 +68,7 @@ public sealed class ModEntry : Mod
       _checklist ??= ChecklistLoader.Load(Helper);
       _graph ??= new RequirementGraph(_checklist);
       var stock = LiveScanner.Collect();
-      entries = ProgressCalculator.Calculate(_checklist, _graph, stock, _staticIndex);
+      entries = ProgressCalculator.Calculate(_checklist, _graph, stock, _staticIndex, _config.IgnoreQuality);
     }
     catch (Exception ex)
     {
@@ -72,9 +77,36 @@ public sealed class ModEntry : Mod
       return;
     }
 
+    // Applied after Calculate(), not before: Required/Total above were computed from the *full* requirement
+    // graph, so a hidden row (a disabled sheet, an excluded legendary-fish Roe row, a Qi Fruit artisan good)
+    // still correctly feeds any other row's cross-sheet formula that references it. This filter only decides
+    // what's shown and what counts toward the Totals dashboard/grand total, same as the per-sheet
+    // All/Incomplete/Complete filter.
+    entries = entries.Where(IsEntryTracked).ToList();
+
     var totalsPage = ProgressCalculator.ComputeTotalsPage(_checklist.Sheets, entries);
 
     Game1.playSound("bigSelect");
     Game1.activeClickableMenu = new TrackerMenu(entries, totalsPage, _config, () => Helper.WriteConfig(_config), Helper.Translation);
+  }
+
+  private bool IsEntryTracked(ProgressEntry entry)
+  {
+    if (!(_config.SheetEnabled.TryGetValue(entry.Sheet, out var enabled) ? enabled : true))
+    {
+      return false;
+    }
+
+    if (_config.ExcludeLegendaryFishRoe && OptionalItemSets.LegendaryFishRoe.Contains((entry.Sheet, entry.Item)))
+    {
+      return false;
+    }
+
+    if (_config.ExcludeQiFruitArtisanGoods && OptionalItemSets.QiFruitArtisanGoods.Contains((entry.Sheet, entry.Item)))
+    {
+      return false;
+    }
+
+    return true;
   }
 }
