@@ -166,16 +166,33 @@ public sealed class TrackerMenu : IClickableMenu
   public override void update(GameTime time)
   {
     base.update(time);
-    _searchBox.Update();
-    if (_searchBox.Text != _lastSearchText)
-    {
-      RefreshVisibleEntries();
-    }
 
-    _totalsSearchBox.Update();
-    if (_activeSheet == TotalsTabKey && _totalsSearchBox.Text != _lastTotalsSearchText)
+    // Only the box on the currently-visible page gets updated - TextBox grabs keyboard focus just by the
+    // mouse hovering its bounds (see TextBox.Update()), and the two boxes sit in nearly the same screen
+    // region (same nav row). Updating both every frame regardless of page let the totals box's Update() -
+    // which always runs after the sheet box's below - steal keyboard focus back from the sheet box whenever
+    // the mouse was anywhere near that shared region, even while a sheet (not the Totals page) was showing.
+    if (_activeSheet == TotalsTabKey)
     {
-      RefreshTotalsSearchEntries();
+      // Not updated, so it can't react to the mouse and reclaim focus - explicitly released too, in case it
+      // was still holding it from just before the page switched (its own Update() won't run again to notice
+      // the mouse has moved off it, so without this it could keep the keyboard dispatcher subscription stuck
+      // on itself for a frame even though it's no longer visible).
+      _searchBox.Selected = false;
+      _totalsSearchBox.Update();
+      if (_totalsSearchBox.Text != _lastTotalsSearchText)
+      {
+        RefreshTotalsSearchEntries();
+      }
+    }
+    else
+    {
+      _totalsSearchBox.Selected = false;
+      _searchBox.Update();
+      if (_searchBox.Text != _lastSearchText)
+      {
+        RefreshVisibleEntries();
+      }
     }
   }
 
@@ -426,7 +443,7 @@ public sealed class TrackerMenu : IClickableMenu
       var totalWidth = Game1.smallFont.MeasureString(totalText).X;
       Utility.drawTextWithShadow(b, totalText, Game1.smallFont, new Vector2(haveColumnX - 16 - totalWidth, rowBounds.Y + 8), rowColor);
 
-      var haveText = entry.Have is null ? _translation.Get("menu.unknown-short").ToString() : $"{entry.Have:N0} / 999";
+      var haveText = entry.Have is null ? _translation.Get("menu.unknown-short").ToString() : $"{entry.Have:N0} / {entry.RequiredLiteral:N0}";
       var haveWidth = Game1.smallFont.MeasureString(haveText).X;
       Utility.drawTextWithShadow(b, haveText, Game1.smallFont, new Vector2(statusColumnX - 16 - haveWidth, rowBounds.Y + 8), rowColor);
 

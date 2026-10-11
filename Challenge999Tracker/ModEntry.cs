@@ -5,6 +5,8 @@ using Challenge999Tracker.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using StardewValley.Menus;
+using StardewValley.Objects;
 
 namespace Challenge999Tracker;
 
@@ -33,7 +35,34 @@ public sealed class ModEntry : Mod
 
   private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
   {
-    if (!Context.IsWorldReady || e.Button != _config.OpenTrackerKey)
+    if (!Context.IsWorldReady)
+    {
+      return;
+    }
+
+    // While the tracker is open, every other keyboard key is suppressed before anything else gets a look at
+    // it - not just the vanilla menu-close binding (see TrackerMenu.receiveKeyPress for that half), but any
+    // other mod's own hotkey too. A search term can contain any letter, and this mod has no way to know which
+    // ones double as some other mod's toggle (e.g. a mod that pauses/resumes something on "L") - suppressing
+    // here consumes the keystroke before that mod's own ButtonPressed handler can act on it.
+    if (Game1.activeClickableMenu is TrackerMenu && e.Button != _config.OpenTrackerKey && e.Button != SButton.Escape
+        && e.Button.TryGetKeyboard(out _))
+    {
+      Helper.Input.Suppress(e.Button);
+    }
+
+    if (e.Button == _config.ToggleLocationTrackedKey && Game1.activeClickableMenu is null)
+    {
+      Helper.Input.Suppress(e.Button);
+      ToggleLocationTracked();
+    }
+    else if (e.Button == _config.ToggleChestTrackedKey && Game1.activeClickableMenu is ItemGrabMenu { sourceItem: Chest chest })
+    {
+      Helper.Input.Suppress(e.Button);
+      ToggleChestTracked(chest);
+    }
+
+    if (e.Button != _config.OpenTrackerKey)
     {
       return;
     }
@@ -54,6 +83,49 @@ public sealed class ModEntry : Mod
     OpenTracker();
   }
 
+  /// <summary>Tags/untags the player's current location as dedicated storage - see <see cref="ModConfig.TrackedLocations" />.</summary>
+  private void ToggleLocationTracked()
+  {
+    var name = Game1.currentLocation.NameOrUniqueName;
+    if (_config.TrackedLocations.Remove(name))
+    {
+      Helper.WriteConfig(_config);
+      Game1.addHUDMessage(new HUDMessage($"999 Challenge Tracker: '{name}' is no longer dedicated storage.") { noIcon = true });
+    }
+    else
+    {
+      _config.TrackedLocations.Add(name);
+      Helper.WriteConfig(_config);
+      Game1.addHUDMessage(new HUDMessage($"999 Challenge Tracker: '{name}' is now dedicated storage - every chest and fridge here counts.") { noIcon = true });
+    }
+  }
+
+  /// <summary>Tags/untags the open chest as dedicated storage - see <see cref="ModConfig.TrackedChests" />.</summary>
+  private void ToggleChestTracked(Chest chest)
+  {
+    if (chest.SpecialChestType == Chest.SpecialChestTypes.JunimoChest)
+    {
+      Game1.addHUDMessage(new HUDMessage("999 Challenge Tracker: Junimo chests share one pool across the whole farm and can't be tagged individually.") { noIcon = true });
+      return;
+    }
+
+    var location = Game1.currentLocation.NameOrUniqueName;
+    var tile = chest.TileLocation;
+    var existing = _config.TrackedChests.FirstOrDefault(t => t.Location == location && t.X == (int)tile.X && t.Y == (int)tile.Y);
+    if (existing != null)
+    {
+      _config.TrackedChests.Remove(existing);
+      Helper.WriteConfig(_config);
+      Game1.addHUDMessage(new HUDMessage("999 Challenge Tracker: this chest is no longer dedicated storage.") { noIcon = true });
+    }
+    else
+    {
+      _config.TrackedChests.Add(new TrackedChestRef { Location = location, X = (int)tile.X, Y = (int)tile.Y });
+      Helper.WriteConfig(_config);
+      Game1.addHUDMessage(new HUDMessage("999 Challenge Tracker: this chest is now dedicated storage.") { noIcon = true });
+    }
+  }
+
   private void OpenTracker()
   {
     // The bundled checklist data and its parsed requirement graph are static (no .ods, no live state involved),
@@ -67,7 +139,7 @@ public sealed class ModEntry : Mod
     {
       _checklist ??= ChecklistLoader.Load(Helper);
       _graph ??= new RequirementGraph(_checklist);
-      var stock = LiveScanner.Collect();
+      var stock = LiveScanner.Collect(_config.ScanOnlyDedicatedStorage, _config.TrackedLocations, _config.TrackedChests);
       entries = ProgressCalculator.Calculate(_checklist, _graph, stock, _staticIndex, _config.IgnoreQuality);
     }
     catch (Exception ex)

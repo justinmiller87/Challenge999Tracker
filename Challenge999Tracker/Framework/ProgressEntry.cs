@@ -6,11 +6,12 @@ namespace Challenge999Tracker.Framework;
 public sealed class ProgressEntry
 {
   public ProgressEntry(
-    string sheet, string item, double required, double total, List<(string Label, double Contribution)> breakdown,
+    string sheet, string item, double requiredLiteral, double required, double total, List<(string Label, double Contribution)> breakdown,
     string target, int? have, int? toGo, int normal, int silver, int gold, int iridium, string matched, string? iconQualifiedId)
   {
     Sheet = sheet;
     Item = item;
+    RequiredLiteral = requiredLiteral;
     Required = required;
     Total = total;
     Breakdown = breakdown;
@@ -28,6 +29,9 @@ public sealed class ProgressEntry
   public string Sheet { get; }
   public string Item { get; }
 
+  /// <summary>This row's own flat base target - every row in the current checklist is 999, but Have/ToGo/IsComplete are judged against this rather than a hardcoded 999, so a future row that genuinely needs a different amount (e.g. two distinct items sharing one checklist row) doesn't silently read as "done" early.</summary>
+  public double RequiredLiteral { get; }
+
   /// <summary>The true, cross-sheet resource target (e.g. Wood's is 944,055, not a flat 999) - see RequirementGraph.</summary>
   public double Required { get; }
 
@@ -40,7 +44,7 @@ public sealed class ProgressEntry
   /// <summary>Quality name ("normal"/"silver"/"gold"/"iridium") this item is tracked at, "any" if it has no quality, or "" if never matched to a game item.</summary>
   public string Target { get; }
 
-  /// <summary>Live count at the tracked quality, or null if the game can't tell this item apart from another source (e.g. a flower cart purchase, a spawned Stone Owl).</summary>
+  /// <summary>Live count at the tracked quality, or null if the game can't tell this item apart from another source at all (see <see cref="ItemMatching.Overrides" />'s empty-array entries).</summary>
   public int? Have { get; }
 
   public int? ToGo { get; }
@@ -55,6 +59,6 @@ public sealed class ProgressEntry
   /// <summary>A qualified item ID ("(O)176"/"(BC)110") to draw an icon for, or null if nothing could be resolved yet.</summary>
   public string? IconQualifiedId { get; }
 
-  /// <summary>The workbook's own compound done rule: AND(Have&gt;=999, Total&gt;=Required).</summary>
-  public bool IsComplete => Have is >= 999 && Total >= Required;
+  /// <summary>The workbook's own compound done rule: AND(Have&gt;=RequiredLiteral, Total&gt;=Required).</summary>
+  public bool IsComplete => Have >= RequiredLiteral && Total >= Required;
 }

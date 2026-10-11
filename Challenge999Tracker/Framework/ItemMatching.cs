@@ -51,7 +51,10 @@ public static class ItemMatching
     ["Rarecrow: 1"] = new[] { "(BC)110" }, ["Rarecrow: 2"] = new[] { "(BC)113" }, ["Rarecrow: 3"] = new[] { "(BC)126" },
     ["Rarecrow: 4"] = new[] { "(BC)136" }, ["Rarecrow: 5"] = new[] { "(BC)137" }, ["Rarecrow: 6"] = new[] { "(BC)138" },
     ["Rarecrow: 7"] = new[] { "(BC)139" }, ["Rarecrow: 8"] = new[] { "(BC)140" },
-    ["Stone Owl(Spawn)"] = Array.Empty<string>(), // can't be told apart from a crafted Stone Owl
+    // Two distinct big-craftables that happen to share a display name ("Stone Owl") - one bought from the
+    // Night Market, one that randomly spawns on the farm. Matched by ID instead of name so each is counted
+    // separately rather than one bucket silently summing both.
+    ["Stone Owl"] = new[] { "(BC)54" }, ["Stone Owl(Spawn)"] = new[] { "(BC)95" },
   };
 
   /// <summary>Crab-pot-only catches never have quality; with Deluxe Bait they top out at silver, and smoking keeps that.</summary>

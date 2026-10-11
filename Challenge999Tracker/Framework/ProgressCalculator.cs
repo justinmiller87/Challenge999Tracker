@@ -75,29 +75,43 @@ public static class ProgressCalculator
       var q = new Dictionary<int, int>();
       var mq = 0;
       var flower = row.Sheet == "Flowers" ? ItemMatching.MatchParenSuffix(row.Label) : null;
+      var isCart = flower is { Success: true } && flower.Groups[2].Value == "Cart";
       var isUnknownOverride = ItemMatching.Overrides.TryGetValue(row.Label, out var overrideValues) && overrideValues.Length == 0;
-      var unknown = (flower is { Success: true } && flower.Groups[2].Value == "Cart") || isUnknownOverride;
+      var unknown = isUnknownOverride;
 
-      foreach (var e in matched)
+      if (isCart)
       {
-        mq = Math.Max(mq, ItemMatching.MaxQuality(e.Name, e.Category));
-        if (flower is { Success: true } && e.Colors.Count > 0)
+        // A Traveling Cart flower is always a plain, uncolored, normal-quality Object - a grown one of the
+        // same species is always a ColoredObject instead. Colors is therefore only ever populated by grown
+        // stock, so whatever's left after subtracting it from the combined total is exactly the cart-sourced
+        // count - no need to treat this as unmatchable the way a flower's own color used to be.
+        var totalAll = matched.Sum(e => e.Quality.Values.Sum());
+        var totalColored = matched.Sum(e => e.Colors.Values.Sum());
+        q[0] = Math.Max(0, totalAll - totalColored);
+      }
+      else
+      {
+        foreach (var e in matched)
         {
-          var baseLabel = flower.Groups[1].Value;
-          var colorName = flower.Groups[2].Value;
-          var namesForBase = colorRows.GetValueOrDefault(baseLabel, new List<string>());
-          var share = e.Colors.Where(kv => ItemMatching.NearestColor(kv.Key, namesForBase) == colorName).Sum(kv => kv.Value);
-          var total = e.Quality.Values.Sum();
-          foreach (var (quality, count) in e.Quality)
+          mq = Math.Max(mq, ItemMatching.MaxQuality(e.Name, e.Category));
+          if (flower is { Success: true } && e.Colors.Count > 0)
           {
-            q[quality] = q.GetValueOrDefault(quality) + (total > 0 ? (int)Math.Round(count * (double)share / total) : 0);
+            var baseLabel = flower.Groups[1].Value;
+            var colorName = flower.Groups[2].Value;
+            var namesForBase = colorRows.GetValueOrDefault(baseLabel, new List<string>());
+            var share = e.Colors.Where(kv => ItemMatching.NearestColor(kv.Key, namesForBase) == colorName).Sum(kv => kv.Value);
+            var total = e.Quality.Values.Sum();
+            foreach (var (quality, count) in e.Quality)
+            {
+              q[quality] = q.GetValueOrDefault(quality) + (total > 0 ? (int)Math.Round(count * (double)share / total) : 0);
+            }
           }
-        }
-        else
-        {
-          foreach (var (quality, count) in e.Quality)
+          else
           {
-            q[quality] = q.GetValueOrDefault(quality) + count;
+            foreach (var (quality, count) in e.Quality)
+            {
+              q[quality] = q.GetValueOrDefault(quality) + count;
+            }
           }
         }
       }
@@ -121,10 +135,10 @@ public static class ProgressCalculator
       var required = graph.Required(row);
       var total = totals.GetValueOrDefault((row.Sheet, row.Label));
       var breakdown = graph.DescribeBreakdown(row);
-      int? toGo = f.Have is null ? null : Math.Max(0, 999 - f.Have.Value);
+      int? toGo = f.Have is null ? null : Math.Max(0, (int)row.RequiredLiteral - f.Have.Value);
 
       result.Add(new ProgressEntry(
-        row.Sheet, row.Label, required, total, breakdown, f.Target, f.Have, toGo,
+        row.Sheet, row.Label, row.RequiredLiteral, required, total, breakdown, f.Target, f.Have, toGo,
         f.Normal, f.Silver, f.Gold, f.Iridium, f.Matched, f.IconId));
     }
 
