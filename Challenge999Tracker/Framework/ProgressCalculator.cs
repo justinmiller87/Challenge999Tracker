@@ -19,12 +19,18 @@ public static class ProgressCalculator
   ///   highest-reachable tier (e.g. iridium for Cask-aged Wine, or iridium-quality produce) - this feeds
   ///   Total/Required/IsComplete/ToGo for free since they're all derived from Have.
   /// </param>
+  /// <param name="requireQiSeasoning">
+  ///   If true, the Cooking sheet's Have only counts gold-quality dishes (quality 2) - the only way a cooked
+  ///   dish ever reaches that quality is Qi Seasoning, since plain cooking always yields normal quality. If
+  ///   false, any cooked dish counts regardless of quality.
+  /// </param>
   public static List<ProgressEntry> Calculate(
     ChecklistDocument document,
     RequirementGraph graph,
     IReadOnlyDictionary<(string Id, string Name), StockEntry> stock,
     IReadOnlyDictionary<string, List<StaticItemIndex.Entry>> staticIndex,
-    bool ignoreQuality = false)
+    bool ignoreQuality = false,
+    bool requireQiSeasoning = true)
   {
     var byId = new Dictionary<string, List<StockEntry>>();
     var byName = new Dictionary<string, List<StockEntry>>();
@@ -116,8 +122,12 @@ public static class ProgressCalculator
         }
       }
 
-      int? have = unknown ? null : mq != 0 && !ignoreQuality ? q.GetValueOrDefault(mq) : q.Values.Sum();
-      var target = matched.Count > 0 ? (mq != 0 ? QualityNames[mq] : "any") : "";
+      // A cooked dish only ever reaches gold quality (2) via Qi Seasoning - plain cooking always yields normal
+      // quality (see CraftingPage.clickCraftingRecipe), so requiring gold here is exactly "made with Qi
+      // Seasoning". Folded into mq itself so it composes with ignoreQuality the same way every other row does.
+      var effectiveMq = row.Sheet == "Cooking" && requireQiSeasoning ? 2 : mq;
+      int? have = unknown ? null : effectiveMq != 0 && !ignoreQuality ? q.GetValueOrDefault(effectiveMq) : q.Values.Sum();
+      var target = matched.Count > 0 ? (effectiveMq != 0 ? QualityNames[effectiveMq] : "any") : "";
       var matchedNames = string.Join("; ", matched.Select(e => e.Name).Distinct().OrderBy(n => n, StringComparer.Ordinal));
       var iconId = ResolveIcon(row.Label, matched, staticIndex);
 

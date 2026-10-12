@@ -140,7 +140,7 @@ public sealed class ModEntry : Mod
       _checklist ??= ChecklistLoader.Load(Helper);
       _graph ??= new RequirementGraph(_checklist);
       var stock = LiveScanner.Collect(_config.ScanOnlyDedicatedStorage, _config.TrackedLocations, _config.TrackedChests);
-      entries = ProgressCalculator.Calculate(_checklist, _graph, stock, _staticIndex, _config.IgnoreQuality);
+      entries = ProgressCalculator.Calculate(_checklist, _graph, stock, _staticIndex, _config.IgnoreQuality, _config.RequireQiSeasoning);
     }
     catch (Exception ex)
     {

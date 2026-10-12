@@ -17,6 +17,14 @@ public sealed class ModConfig
   /// <summary>If true, Have/999 counts an item at any quality instead of requiring its own highest-reachable quality (e.g. iridium-aged Wine) - for players who don't want to quality-grind everything.</summary>
   public bool IgnoreQuality { get; set; }
 
+  /// <summary>
+  ///   If true (the default), the Cooking sheet's Have only counts a dish made with Qi Seasoning (the game
+  ///   always crafts it at gold quality, the only way a cooked dish ever reaches that quality) - plain-cooked
+  ///   dishes don't count. If false, any cooked dish counts regardless of quality. See
+  ///   <see cref="Framework.ProgressCalculator" />.
+  /// </summary>
+  public bool RequireQiSeasoning { get; set; } = true;
+
   /// <summary>Excludes the five one-time-catch legendary fish's Roe/Aged Roe rows from Required/Total - for players who caught (and didn't keep) one before they started tracking, so a Fish Pond can never breed it. See <see cref="Framework.OptionalItemSets.LegendaryFishRoe" />.</summary>
   public bool ExcludeLegendaryFishRoe { get; set; }
 

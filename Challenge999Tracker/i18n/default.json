@@ -3,6 +3,8 @@
   "config.open-tracker-key.tooltip": "The key that opens the 999 Challenge Tracker during gameplay. Press it again (or Escape) to close.",
   "config.ignore-quality.name": "Ignore quality",
   "config.ignore-quality.tooltip": "Count an item's Have/999 at any quality instead of requiring its own highest-reachable quality (e.g. iridium-aged Wine, or iridium produce). Turn this on if you don't want to quality-grind everything.",
+  "config.require-qi-seasoning.name": "Require Qi Seasoning for Cooking",
+  "config.require-qi-seasoning.tooltip": "If on (default), the Cooking sheet's Have only counts dishes made with Qi Seasoning - the game always crafts those at gold quality, the only way a cooked dish ever reaches that quality, so this is exactly 'made with Qi Seasoning'. Turn this off to count any cooked dish regardless of quality.",
   "config.optional-items.section": "Optional items",
   "config.exclude-legendary-roe.name": "Exclude legendary fish Roe",
   "config.exclude-legendary-roe.tooltip": "Excludes Roe/Aged Roe for Crimsonfish, Angler, Legend, Glacierfish and Mutant Carp from Required/Total. Turn this on if you caught (and didn't keep) one of these before you started tracking - a Fish Pond needs a live specimen to breed from, so it can never be caught again.",

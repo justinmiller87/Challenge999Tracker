@@ -34,6 +34,14 @@ internal static class GenericModConfigMenuIntegration
       () => helper.Translation.Get("config.ignore-quality.tooltip")
     );
 
+    api.AddBoolOption(
+      manifest,
+      () => config.RequireQiSeasoning,
+      v => config.RequireQiSeasoning = v,
+      () => helper.Translation.Get("config.require-qi-seasoning.name"),
+      () => helper.Translation.Get("config.require-qi-seasoning.tooltip")
+    );
+
     api.AddSectionTitle(manifest, () => helper.Translation.Get("config.optional-items.section"));
 
     api.AddBoolOption(
@@ -96,6 +104,7 @@ internal static class GenericModConfigMenuIntegration
     var defaults = new ModConfig();
     config.OpenTrackerKey = defaults.OpenTrackerKey;
     config.IgnoreQuality = defaults.IgnoreQuality;
+    config.RequireQiSeasoning = defaults.RequireQiSeasoning;
     config.ExcludeLegendaryFishRoe = defaults.ExcludeLegendaryFishRoe;
     config.ExcludeQiFruitArtisanGoods = defaults.ExcludeQiFruitArtisanGoods;
     config.SheetEnabled.Clear();
